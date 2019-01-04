@@ -16,6 +16,10 @@ import tornadofx.*
 
 class TextricatorGuiController: Controller() {
 
+	companion object {
+		const val MAX_ROWS = 1000
+	}
+
 	val fileProperty = SimpleObjectProperty<File?>()
 	val file by fileProperty
 
@@ -44,13 +48,13 @@ class TextricatorGuiController: Controller() {
 
 	val extractData = mutableListOf<Text>().observable()
 
-	fun extract() {
+	fun extract(): Boolean {
 
 		val options = TextExtractorOptions(
 				boxPrecision = boxPrecision,
 				boxIgnoreColors = boxIgnoreColors.split(",").toSet() )
 
-		file!!.inputStream().use { fileInput ->
+		return file!!.inputStream().use { fileInput ->
 			TextExtractorFactory.getFactory(parserName)
 					.create( fileInput, options )
 					.use { extractor ->
@@ -58,7 +62,9 @@ class TextricatorGuiController: Controller() {
 								extractor = extractor,
 								pageFilter = pages.toPageFilter(),
 								maxRowDistance = maxRowDistance )
-						extractData.addAll(texts.take(1000))
+						val list = texts.take(MAX_ROWS+1).toList()
+						extractData.setAll(list.take(MAX_ROWS))
+						list.size > MAX_ROWS
 					}
 		}
 	}
