@@ -21,7 +21,13 @@ class TextricatorGuiController: Controller() {
 
 	// extract
 
-	val parserNameProperty = SimpleStringProperty("")
+	val parsers = TextExtractorFactory.extractorNames
+			.filter { it.startsWith( "pdf.") }
+			.sorted()
+			.toMutableList()
+			.observable()
+
+	val parserNameProperty = SimpleStringProperty(parsers.firstOrNull())
 	val parserName by parserNameProperty
 
 	val pagesProperty = SimpleStringProperty("1-")

@@ -86,10 +86,7 @@ class TextricatorGuiView: View() {
 								fieldset {
 									field("Parser") {
 										combobox<String>(controller.parserNameProperty) {
-											items = TextExtractorFactory.extractorNames
-													.filter { it.startsWith( "pdf.") }
-													.toMutableList()
-													.observable()
+											items = controller.parsers
 										}
 									}
 									field("Pages") {
