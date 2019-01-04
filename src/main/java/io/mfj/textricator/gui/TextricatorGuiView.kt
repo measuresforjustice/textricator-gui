@@ -78,6 +78,7 @@ class TextricatorGuiView: View() {
 			}
 			center = tabpane {
 				tab("Extract") {
+					isClosable = false
 					squeezebox {
 						extractOptionsFold = fold("Options") {
 							isExpanded = true
@@ -129,9 +130,11 @@ class TextricatorGuiView: View() {
 					}
 				}
 				tab("Parse Table") {
+					isClosable = false
 					label("TODO")
 				}
 				tab("Parse Form") {
+					isClosable = false
 					label("TODO")
 				}
 			}
