@@ -77,7 +77,7 @@ class TextricatorGuiView: View() {
 			center = tabpane {
 				tab("Extract") {
 					isClosable = false
-					content = find<ExtractView>().root
+					add<ExtractView>()
 				}
 				tab("Parse Table") {
 					isClosable = false
