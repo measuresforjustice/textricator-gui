@@ -6,9 +6,13 @@ class AboutView:View() {
 	init {
 		title = "About Textricator GUI"
 	}
-	override val root = vbox {
-		label("Textricator version: ${io.mfj.textricator.Version.version}")
-		label("Textricator GUI version: ${Version.version}")
+	override val root = hbox {
+		imageview( TextricatorGuiApp.logo256 )
+
+		vbox {
+			label("Textricator version: ${io.mfj.textricator.Version.version}")
+			label("Textricator GUI version: ${Version.version}")
+		}
 		setOnMouseClicked { event -> close() }
 		onDoubleClick { close() }
 	}
