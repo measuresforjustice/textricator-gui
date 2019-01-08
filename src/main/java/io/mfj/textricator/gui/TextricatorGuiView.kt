@@ -1,9 +1,9 @@
 package io.mfj.textricator.gui
 
-import io.mfj.textricator.extractor.TextExtractorFactory
 import io.mfj.textricator.text.Text
 import javafx.scene.control.Alert
 import javafx.scene.control.TitledPane
+import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import tornadofx.*
 
@@ -59,9 +59,10 @@ class TextricatorGuiView: View() {
 				}
 		center = borderpane {
 			top = hbox {
-				label( "PDF" )
+				label( "PDF:" )
 				textfield(controller.fileProperty,FileStringConverter) {
 					isEditable = false
+					hgrow = Priority.ALWAYS
 				}
 				button("...") {
 					action {
@@ -83,7 +84,11 @@ class TextricatorGuiView: View() {
 					squeezebox {
 						extractOptionsFold = fold("Options") {
 							isExpanded = true
+							expandedProperty().onChange {
+								extractTableFold.isExpanded = !isExpanded
+							}
 							form {
+								vgrow = Priority.ALWAYS
 								fieldset {
 									field("Parser") {
 										combobox<String>(controller.parserNameProperty) {
@@ -126,6 +131,9 @@ class TextricatorGuiView: View() {
 						}
 						extractTableFold = fold("Extracted Text") {
 							isExpanded = false
+							expandedProperty().onChange {
+								extractOptionsFold.isExpanded = !isExpanded
+							}
 							tableview(controller.extractData) {
 								readonlyColumn("page",Text::pageNumber)
 								readonlyColumn("ulx",Text::ulx)
