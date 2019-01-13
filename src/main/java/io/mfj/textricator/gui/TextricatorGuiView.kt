@@ -81,11 +81,11 @@ class TextricatorGuiView: View() {
 				}
 				tab("Parse Table") {
 					isClosable = false
-					label("TODO")
+					add<ParseTableView>()
 				}
 				tab("Parse Form") {
 					isClosable = false
-					label("TODO")
+					add<ParseFormView>()
 				}
 			}
 

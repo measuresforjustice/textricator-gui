@@ -1,12 +1,14 @@
 package io.mfj.textricator.gui
 
 import java.awt.GraphicsEnvironment
+import java.io.File
 
+import javafx.scene.control.TitledPane
 import javafx.stage.Screen
 import javafx.stage.Stage
 import javafx.util.StringConverter
+
 import tornadofx.*
-import java.io.File
 
 /**
  * Call from [UIComponent.onBeforeShow].
@@ -58,4 +60,42 @@ fun getPrimaryScreen():Screen {
 object FileStringConverter:StringConverter<File?>() {
 	override fun fromString(path: String?): File? = path?.let { File(it) }
 	override fun toString(file: File?): String = file?.absolutePath ?: ""
+}
+
+fun SqueezeBox.onlyOneOpen() {
+	var enabled = true
+	var lastOpen:TitledPane? = null
+	childrenUnmodifiable
+			.asSequence()
+			.filterIsInstance<TitledPane>()
+			.forEachIndexed { index, fold ->
+				fold.isExpanded = ( index == 0 )
+				fold.expandedProperty().onChange {
+					if ( enabled ) {
+						enabled = false
+						try {
+							val open =
+									if ( fold.isExpanded ) {
+										fold
+									} else {
+										lastOpen
+												?: childrenUnmodifiable
+														.asSequence()
+														.filterIsInstance<TitledPane>()
+														.filter { it !== fold }
+														.first()
+									}
+							childrenUnmodifiable
+									.asSequence()
+									.filterIsInstance<TitledPane>()
+									.forEach {
+										if ( it.isExpanded && it !== open ) lastOpen = it
+										it.isExpanded = ( it === open )
+									}
+						} finally {
+							enabled = true
+						}
+					}
+				}
+			}
 }

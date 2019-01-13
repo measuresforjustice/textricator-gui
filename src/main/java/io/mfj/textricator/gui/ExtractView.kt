@@ -10,16 +10,9 @@ class ExtractView: View() {
 
 	val controller:ExtractController by inject()
 
-	private var extractOptionsFold: TitledPane by singleAssign()
-	private var extractTableFold:TitledPane by singleAssign()
-
 	override val root =
 			squeezebox {
-				extractOptionsFold = fold("Options") {
-					isExpanded = true
-					expandedProperty().onChange {
-						extractTableFold.isExpanded = !isExpanded
-					}
+				fold("Options") {
 					form {
 						vgrow = Priority.ALWAYS
 						fieldset {
@@ -48,8 +41,7 @@ class ExtractView: View() {
 								runAsync {
 									controller.extract()
 								} ui { truncated ->
-									extractOptionsFold.isExpanded = false
-									extractTableFold.isExpanded = true
+									isExpanded = false
 									if ( truncated ) {
 										alert(
 												type = Alert.AlertType.INFORMATION,
@@ -62,11 +54,7 @@ class ExtractView: View() {
 						}
 					}
 				}
-				extractTableFold = fold("Extracted Text") {
-					isExpanded = false
-					expandedProperty().onChange {
-						extractOptionsFold.isExpanded = !isExpanded
-					}
+				fold("Extracted Text") {
 					tableview(controller.extractData) {
 						readonlyColumn("page",Text::pageNumber)
 						readonlyColumn("ulx",Text::ulx)
@@ -86,6 +74,7 @@ class ExtractView: View() {
 						}
 					}
 				}
+				onlyOneOpen()
 			}
 
 }
