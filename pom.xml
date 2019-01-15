@@ -34,7 +34,7 @@
     <kotlin.version>1.3.11</kotlin.version>
     <dokka.version>0.9.17</dokka.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <version.textricator>9.1-SNAPSHOT</version.textricator> <!-- If you change this, update the itext versions if necessary. -->
+    <version.textricator>9.1-SNAPSHOT</version.textricator>
     <copyright.year>2019</copyright.year>
     <source.location>https://github.com/measuresforjustice/textricator-gui</source.location>
   </properties>
