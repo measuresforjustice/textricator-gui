@@ -59,7 +59,7 @@ class ParseFormView:View() {
 										alert(
 												type = Alert.AlertType.INFORMATION,
 												title = "Truncated",
-												header = "Only the first ${ExtractController.MAX_ROWS} texts are shown."
+												header = "Only the first ${ParseFormController.MAX_ROWS} texts are shown."
 										)
 									}
 								}

@@ -1,6 +1,7 @@
 package io.mfj.textricator.gui
 
 import javafx.scene.control.Alert
+import javafx.scene.control.TableColumn
 import javafx.scene.control.TitledPane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
@@ -11,7 +12,7 @@ class ParseTableView:View() {
 
 	val controller:ParseTableController by inject()
 
-	private var dataFold:TitledPane by singleAssign()
+	var dataFold:TitledPane by singleAssign()
 
 	override val root =
 			squeezebox {
@@ -43,11 +44,12 @@ class ParseTableView:View() {
 								runAsync {
 									controller.parse()
 								} ui { truncated ->
+									dataFold.isExpanded = true
 									if ( truncated ) {
 										alert(
 												type = Alert.AlertType.INFORMATION,
 												title = "Truncated",
-												header = "Only the first ${ExtractController.MAX_ROWS} texts are shown."
+												header = "Only the first ${ParseTableController.MAX_ROWS} texts are shown."
 										)
 									}
 								}
@@ -55,23 +57,22 @@ class ParseTableView:View() {
 						}
 					}
 				}
-				fold("Log") {
-					textarea(controller.logProperty) {
-						vgrow = Priority.ALWAYS
-						hgrow = Priority.ALWAYS
-					}
-				}
 				dataFold = fold("Data") {
-					tableview(controller.data) {
-						controller.data.onChange {
-							columns.clear()
-							controller.headers.forEachIndexed { index, header ->
-								column<Array<String>,String>(
-										title=header,
-										valueProvider = { it.value[index].toProperty() }
-								)
+					label("nothing parsed yet")
+					controller.data.onChange {
+						runLater {
+							if ( controller.data.isNotEmpty() ) {
+								this@fold.content = tableview(controller.data) {
+									controller.headers.forEachIndexed { index, header ->
+										column(title = header,
+												valueProvider = { cellDataFeatures: TableColumn.CellDataFeatures<Array<String>, String> ->
+													cellDataFeatures.value.get(index).toProperty()
+												})
+									}
+								}
+							} else {
+								this@fold.content = label("No data")
 							}
-
 						}
 					}
 				}
