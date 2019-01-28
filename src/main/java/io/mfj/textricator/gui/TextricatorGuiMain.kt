@@ -41,7 +41,7 @@ object TextricatorGuiMain {
 				.parse(args.toList())
 
 		when {
-			opts.b("--version") -> {
+			opts.getBoolean("--version") -> {
 				println( "Textricator GUI version: ${Version.version}" )
 				println( "Textricator version: ${io.mfj.textricator.Version.version}" )
 			}
@@ -51,9 +51,10 @@ object TextricatorGuiMain {
 		}
 	}
 
-	private fun Map<String,Any>.s(key:String):String? = get(key)?.toString()
+	private fun Map<String,Any>.getString(key:String):String? = get(key)?.toString()
 
-	private fun Map<String,Any>.b(key:String,default:Boolean=false):Boolean = get(key)?.toString()?.toBoolean() ?: default
+	private fun Map<String,Any>.getBoolean(key: String, default: Boolean = false): Boolean =
+			get(key)?.toString()?.toBoolean() ?: default
 
 }
 

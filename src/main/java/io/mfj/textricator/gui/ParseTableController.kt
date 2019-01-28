@@ -28,11 +28,7 @@ import javafx.beans.property.SimpleObjectProperty
 
 import tornadofx.*
 
-class ParseTableController:Controller() {
-
-	companion object {
-		const val MAX_ROWS = 1000
-	}
+class ParseTableController: Controller() {
 
 	val mainController:TextricatorGuiController by inject()
 
@@ -62,17 +58,19 @@ class ParseTableController:Controller() {
 			}
 			data.setAll(list.take(MAX_ROWS))
 			return list.size > MAX_ROWS
-		} catch ( e:Exception ) {
+		} catch (e: Exception) {
 			data.clear()
 			throw e
 		}
 	}
 
-
-	private fun createHeader( config:RecordModel ): List<String> {
+	// I see the next few methods in another controller - perhaps these methods can be
+	// pulled out into utilities or something. I'll have to wait until I'm able to import
+	// the other textricator project
+	private fun createHeader(config: RecordModel): List<String> {
 		val header:MutableList<String> = mutableListOf()
 
-		fun proc( recordType: RecordType) {
+		fun proc(recordType: RecordType) {
 			recordType.valueTypes.forEach { valueTypeId ->
 				val valueType = config.valueTypes[valueTypeId]
 				if ( valueType?.include ?: true ) {
@@ -148,6 +146,11 @@ class ParseTableController:Controller() {
 		printType(rootRecordType)
 
 		return row.toTypedArray()
+	}
+
+	// Kotlin convention generally sticks the companion object at the bottom
+	companion object {
+		const val MAX_ROWS = 1000
 	}
 
 }
