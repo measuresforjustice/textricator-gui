@@ -30,43 +30,47 @@ import javafx.scene.control.TextArea
 
 import tornadofx.*
 
-class ParseFormController:Controller() {
+class ParseFormController: Controller() {
 
-	companion object {
-		const val MAX_ROWS = 1000
-	}
-
-	val mainController:TextricatorGuiController by inject()
+	private val mainController: TextricatorGuiController by inject()
 
 	val configFileProperty = SimpleObjectProperty<File>()
 
 	val headers = mutableListOf<String>()
 	val data = mutableListOf<Array<String>>().observable()
 
-	fun parse( textarea:TextArea ): Boolean {
-
+	fun parse(textarea: TextArea): Boolean {
 		try {
 			val config = FormParseConfigUtil.parseYaml(configFileProperty.get())
+			val file = mainController.file
+			var result = false
 
 			headers.clear()
 			headers.addAll( createHeader(config) )
 
-			val inputFormat = mainController.file!!.extension.toLowerCase()
+			// rather than forcing the existence, you can create null safety with the safety check
+			if (file != null) {
+				val inputFormat = file.extension.toLowerCase()
+				val eventListener:FormParseEventListener = TextAreaLogFormParseEventListener(textarea)
 
-			val eventListener:FormParseEventListener = TextAreaLogFormParseEventListener(textarea)
-
-			val list = mainController.file!!.inputStream().use { input ->
-				Textricator.getExtractor( input, inputFormat, config ).use { extractor ->
-					Textricator.parseForm( extractor, config, eventListener )
-							.map { record -> recordToArray(config,record) }
-							.flatten()
-							.take(MAX_ROWS+1)
-							.toList()
+				val list = file.inputStream().use { input ->
+					Textricator.getExtractor(input, inputFormat, config).use { extractor ->
+						Textricator.parseForm( extractor, config, eventListener )
+								.map { record -> recordToArray(config, record) }
+								.flatten()
+								.take(MAX_ROWS+1)
+								.toList()
+					}
 				}
+				// why set data to list.take(MAX_ROWS) when we already
+				// take the result of parseForm() with MaxRows+1?
+				// why use the size check to return a boolean result?
+				data.setAll(list.take(MAX_ROWS))
+				result = list.size > MAX_ROWS
 			}
-			data.setAll(list.take(MAX_ROWS))
-			return list.size > MAX_ROWS
-		} catch ( e:Exception ) {
+
+			return result
+		} catch (e: Exception) {
 			data.clear()
 			throw e
 		}
@@ -79,37 +83,36 @@ class ParseFormController:Controller() {
 		fun proc( recordType: RecordType) {
 			recordType.valueTypes.forEach { valueTypeId ->
 				val valueType = config.valueTypes[valueTypeId]
-				if ( valueType?.include ?: true ) {
+				if (valueType?.include != false) {
 					val label = valueType?.label ?: valueTypeId
 					header.add(label)
 				}
 			}
 			recordType.children
-					.map { config.recordTypes[it] ?: throw Exception("missing type ${it}") }
-					.forEach { childRecordType ->
-						proc( childRecordType )
+					.map { config.recordTypes[it] ?: throw Exception("missing type $it") }
+					.forEach {
+						proc(it)
 					}
 		}
+
 		val rootRecordType = config.recordTypes[config.rootRecordType] ?: throw Exception("missing type ${config.rootRecordType}")
 		proc(rootRecordType)
 
 		return header
 	}
 
-	private fun recordToArray( config:RecordModel, record: Record ): List<Array<String>> {
+	private fun recordToArray(config: RecordModel, record: Record): List<Array<String>> {
+		val rows: MutableList<Array<String>> = mutableListOf()
+		val map: MutableMap<RecordType, Record> = mutableMapOf()
 
-		val rows:MutableList<Array<String>> = mutableListOf()
-
-		val map:MutableMap<RecordType, Record> = mutableMapOf()
-
-		fun pr(rec:Record) {
+		fun pr(rec: Record) {
 			val type = config.recordTypes[rec.typeId] ?: throw Exception( "Missing type ${rec.typeId}" )
 			map[type] = rec
 
-			if ( rec.isLeaf ) {
-				rows.add( createRow(config,map) )
+			if (rec.isLeaf) {
+				rows.add( createRow(config, map) )
 			} else {
-				rec.children.values.forEach { it.forEach { pr(it) } }
+				rec.children.values.forEach { value -> value.forEach { pr(it) } }
 			}
 
 			map.remove(type)
@@ -120,38 +123,48 @@ class ParseFormController:Controller() {
 		return rows
 	}
 
-	private fun createRow( config:RecordModel, map:Map<RecordType, Record> ): Array<String> {
+	private fun createRow(config: RecordModel, map: Map<RecordType, Record>): Array<String> {
 
-		val row:MutableList<String> = mutableListOf()
+		val row: MutableList<String> = mutableListOf()
 
-		var pageNumber:Int? = null
-		var pageNumberPriority:Int = -1
+		var pageNumber: Int? = null
+		var pageNumberPriority: Int = -1
 
-		fun printType( recordType:RecordType) {
+		fun printType(recordType: RecordType) {
 			val rec = map[recordType]
 
-			if ( ( rec != null ) && ( pageNumber == null || recordType.pagePriority > pageNumberPriority ) ) {
+			if ((rec != null) && (pageNumber == null || recordType.pagePriority > pageNumberPriority)) {
 				pageNumber = rec.pageNumber
 				pageNumberPriority = recordType.pagePriority
-			}
 
-			recordType.valueTypes.forEach { valueTypeId ->
-				val valueType = config.valueTypes[valueTypeId]
-				if ( valueType?.include ?: true ) {
-					row.add( rec?.values?.get(valueTypeId) ?: "" )
+
+				recordType.valueTypes.forEach { valueTypeId ->
+
+					val valueType = config.valueTypes[valueTypeId]
+
+					if (valueType != null && valueType.include) {
+						row.add(rec.values[valueTypeId] ?: "")
+					}
+
 				}
 			}
+
 			recordType.children
-					.map { config.recordTypes[it] ?: throw Exception("missing type ${it}") }
+					.map { config.recordTypes[it] ?: throw Exception("missing type $it") }
 					.forEach { childRecordType ->
 						printType( childRecordType )
 					}
 		}
+
 		val rootRecordType = config.recordTypes[config.rootRecordType] ?: throw Exception("missing type ${config.rootRecordType}")
 
 		printType(rootRecordType)
 
 		return row.toTypedArray()
+	}
+
+	companion object {
+		const val MAX_ROWS = 1000
 	}
 
 }

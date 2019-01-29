@@ -28,13 +28,9 @@ import javafx.beans.property.SimpleObjectProperty
 
 import tornadofx.*
 
-class ParseTableController:Controller() {
+class ParseTableController: Controller() {
 
-	companion object {
-		const val MAX_ROWS = 1000
-	}
-
-	val mainController:TextricatorGuiController by inject()
+	private val mainController: TextricatorGuiController by inject()
 
 	val configFileProperty = SimpleObjectProperty<File>()
 
@@ -42,49 +38,58 @@ class ParseTableController:Controller() {
 	val data = mutableListOf<Array<String>>().observable()
 
 	fun parse(): Boolean {
-
 		try {
 			val config = TableParseConfigUtil.parseYaml(configFileProperty.get())
+			val file = mainController.file
+			var result = false
 
 			headers.clear()
-			headers.addAll( createHeader(config) )
+			headers.addAll(createHeader(config))
 
-			val inputFormat = mainController.file!!.extension.toLowerCase()
+			if (file != null) {
+				val inputFormat = file.extension.toLowerCase()
 
-			val list = mainController.file!!.inputStream().use { input ->
-				Textricator.getExtractor( input, inputFormat, config ).use { extractor ->
-					Textricator.parseTable( extractor, config )
-							.map { record -> recordToArray(config,record) }
-							.flatten()
-							.take(MAX_ROWS+1)
-							.toList()
+				val list = file.inputStream().use { input ->
+					Textricator.getExtractor( input, inputFormat, config ).use { extractor ->
+						Textricator.parseTable( extractor, config )
+								.map { record -> recordToArray(config,record) }
+								.flatten()
+								.take(MAX_ROWS+1)
+								.toList()
+					}
 				}
+
+				data.setAll(list.take(MAX_ROWS))
+				result = list.size > MAX_ROWS
 			}
-			data.setAll(list.take(MAX_ROWS))
-			return list.size > MAX_ROWS
-		} catch ( e:Exception ) {
+
+			return result
+
+		} catch (e: Exception) {
 			data.clear()
 			throw e
 		}
 	}
 
-
-	private fun createHeader( config:RecordModel ): List<String> {
+	// I see the next few methods in another controller - perhaps these methods can be
+	// pulled out into utilities or something. I'll have to wait until I'm able to import
+	// the other textricator project
+	private fun createHeader(config: RecordModel): List<String> {
 		val header:MutableList<String> = mutableListOf()
 
-		fun proc( recordType: RecordType) {
+		fun proc(recordType: RecordType) {
 			recordType.valueTypes.forEach { valueTypeId ->
 				val valueType = config.valueTypes[valueTypeId]
-				if ( valueType?.include ?: true ) {
+
+				if (valueType?.include != false) {
 					val label = valueType?.label ?: valueTypeId
 					header.add(label)
 				}
 			}
+
 			recordType.children
-					.map { config.recordTypes[it] ?: throw Exception("missing type ${it}") }
-					.forEach { childRecordType ->
-						proc( childRecordType )
-					}
+					.map { config.recordTypes[it] ?: throw Exception("missing type $it") }
+					.forEach { childRecordType -> proc(childRecordType) }
 		}
 		val rootRecordType = config.recordTypes[config.rootRecordType] ?: throw Exception("missing type ${config.rootRecordType}")
 		proc(rootRecordType)
@@ -92,20 +97,18 @@ class ParseTableController:Controller() {
 		return header
 	}
 
-	private fun recordToArray( config:RecordModel, record: Record ): List<Array<String>> {
-
-		val rows:MutableList<Array<String>> = mutableListOf()
-
-		val map:MutableMap<RecordType, Record> = mutableMapOf()
+	private fun recordToArray(config: RecordModel, record: Record): List<Array<String>> {
+		val rows: MutableList<Array<String>> = mutableListOf()
+		val map: MutableMap<RecordType, Record> = mutableMapOf()
 
 		fun pr(rec:Record) {
 			val type = config.recordTypes[rec.typeId] ?: throw Exception( "Missing type ${rec.typeId}" )
 			map[type] = rec
 
-			if ( rec.isLeaf ) {
-				rows.add( createRow(config,map) )
+			if (rec.isLeaf) {
+				rows.add( createRow(config, map) )
 			} else {
-				rec.children.values.forEach { it.forEach { pr(it) } }
+				rec.children.values.forEach { value -> value.forEach { pr(it) } }
 			}
 
 			map.remove(type)
@@ -116,38 +119,44 @@ class ParseTableController:Controller() {
 		return rows
 	}
 
-	private fun createRow( config:RecordModel, map:Map<RecordType, Record> ): Array<String> {
-
+	private fun createRow(config: RecordModel, map: Map<RecordType, Record>): Array<String> {
 		val row:MutableList<String> = mutableListOf()
 
-		var pageNumber:Int? = null
-		var pageNumberPriority:Int = -1
+		var pageNumber: Int? = null
+		var pageNumberPriority: Int = -1
 
 		fun printType( recordType:RecordType) {
 			val rec = map[recordType]
 
-			if ( ( rec != null ) && ( pageNumber == null || recordType.pagePriority > pageNumberPriority ) ) {
+			if ((rec != null) && (pageNumber == null || recordType.pagePriority > pageNumberPriority)) {
 				pageNumber = rec.pageNumber
 				pageNumberPriority = recordType.pagePriority
 			}
 
 			recordType.valueTypes.forEach { valueTypeId ->
 				val valueType = config.valueTypes[valueTypeId]
-				if ( valueType?.include ?: true ) {
-					row.add( rec?.values?.get(valueTypeId) ?: "" )
+
+				if (valueType?.include != false && rec != null) {
+					row.add(rec.values[valueTypeId] ?: "")
 				}
 			}
+
 			recordType.children
-					.map { config.recordTypes[it] ?: throw Exception("missing type ${it}") }
-					.forEach { childRecordType ->
-						printType( childRecordType )
-					}
+					.map { config.recordTypes[it] ?: throw Exception("Missing type $it") }
+					.forEach { childRecordType -> printType(childRecordType) }
 		}
-		val rootRecordType = config.recordTypes[config.rootRecordType] ?: throw Exception("missing type ${config.rootRecordType}")
+
+		val rootRecordType = config.recordTypes[config.rootRecordType]
+				?: throw Exception("Missing type ${config.rootRecordType}")
 
 		printType(rootRecordType)
 
 		return row.toTypedArray()
+	}
+
+	// Kotlin convention generally sticks the companion object at the bottom
+	companion object {
+		const val MAX_ROWS = 1000
 	}
 
 }

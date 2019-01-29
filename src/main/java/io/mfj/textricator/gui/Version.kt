@@ -26,9 +26,9 @@ object Version {
 
 	init {
 		val props = Properties().apply {
-			Version::class.java.getResourceAsStream( "version.properties" ).use { input ->
-				load( input )
-			}
+			Version::class.java
+					.getResourceAsStream( "version.properties" )
+					.use { input -> load(input) }
 		}
 		version = props.getProperty("version")
 		copyrightYear = props.getProperty("copyright.year")
