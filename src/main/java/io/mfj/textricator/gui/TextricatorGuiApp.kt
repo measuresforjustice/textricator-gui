@@ -26,7 +26,10 @@ class TextricatorGuiApp:App(TextricatorGuiView::class) {
 		val logo512 = image("textricator-logo-512.png")
 		val logo256 = image("textricator-logo-256.png")
 
-		fun image( name:String ): Image = TextricatorGuiApp::class.java.getResourceAsStream("/io/mfj/textricator/gui/${name}").use { Image(it) }
+		private fun image(name: String): Image =
+				TextricatorGuiApp::class.java
+						.getResourceAsStream("/io/mfj/textricator/gui/$name")
+						.use { Image(it) }
 	}
 
 	override fun start(stage: Stage) {

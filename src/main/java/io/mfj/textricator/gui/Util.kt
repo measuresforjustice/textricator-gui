@@ -68,7 +68,7 @@ fun getPrimaryScreen(): Screen {
 			// no match, use the (possibly wrong) primary JavaFX screen
 			Screen.getPrimary()
 					.apply {
-						System.err.println( "No JavaFX screen matched the primary AWT screen, returning the primary JavaFX screen." )
+						System.err.println("No JavaFX screen matched the primary AWT screen, returning the primary JavaFX screen.")
 					}
 			)
 }
@@ -80,7 +80,7 @@ object FileStringConverter: StringConverter<File?>() {
 
 fun SqueezeBox.onlyOneOpen() {
 	var enabled = true
-	var lastOpen:TitledPane? = null
+	var lastOpen: TitledPane? = null
 
 	childrenUnmodifiable
 			.asSequence()

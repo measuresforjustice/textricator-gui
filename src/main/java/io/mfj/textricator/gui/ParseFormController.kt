@@ -32,11 +32,7 @@ import tornadofx.*
 
 class ParseFormController: Controller() {
 
-	companion object {
-		const val MAX_ROWS = 1000
-	}
-
-	val mainController: TextricatorGuiController by inject()
+	private val mainController: TextricatorGuiController by inject()
 
 	val configFileProperty = SimpleObjectProperty<File>()
 
@@ -44,10 +40,10 @@ class ParseFormController: Controller() {
 	val data = mutableListOf<Array<String>>().observable()
 
 	fun parse(textarea: TextArea): Boolean {
-
 		try {
 			val config = FormParseConfigUtil.parseYaml(configFileProperty.get())
 			val file = mainController.file
+			var result = false
 
 			headers.clear()
 			headers.addAll( createHeader(config) )
@@ -55,7 +51,6 @@ class ParseFormController: Controller() {
 			// rather than forcing the existence, you can create null safety with the safety check
 			if (file != null) {
 				val inputFormat = file.extension.toLowerCase()
-
 				val eventListener:FormParseEventListener = TextAreaLogFormParseEventListener(textarea)
 
 				val list = file.inputStream().use { input ->
@@ -69,11 +64,12 @@ class ParseFormController: Controller() {
 				}
 				// why set data to list.take(MAX_ROWS) when we already
 				// take the result of parseForm() with MaxRows+1?
+				// why use the size check to return a boolean result?
 				data.setAll(list.take(MAX_ROWS))
+				result = list.size > MAX_ROWS
 			}
 
-			// what's the motivation behind checking size for ensuring parsing validation?
-			return data.size + 1 > MAX_ROWS
+			return result
 		} catch (e: Exception) {
 			data.clear()
 			throw e
@@ -81,37 +77,31 @@ class ParseFormController: Controller() {
 	}
 
 
-	private fun createHeader(config: RecordModel): List<String> {
-		// What's the rootRecordType is needed for?
-		val rootRecordType = config.recordTypes[config.rootRecordType]
-				?: throw Exception("Missing type ${config.rootRecordType}")
+	private fun createHeader( config:RecordModel ): List<String> {
+		val header:MutableList<String> = mutableListOf()
 
-		return proc(rootRecordType, mutableListOf())
-	}
-
-	// nested functions are harder to test, so I pulled out the recursive function
-	// the fact this was called proc did make me understand that the point was
-	// the function was meant to be internal.
-
-	// TODO - fix this recursive function
-	private fun proc(recordType: RecordType, header: MutableList<String>):  MutableList<String> {
-		recordType.valueTypes.forEach { valueTypeId ->
-			val valueType = config.valueTypes[valueTypeId]
-			// what's the motivation behind setting a null value to true?
-			if (valueType.include ?: true) {
-				val label = valueType.label ?: valueTypeId
-				header.add(label)
-			}
-		}
-		recordType.children
-				.mapNotNull { config.recordTypes[it] }
-				.forEach { childRecordType ->
-					proc(childRecordType, header)
+		fun proc( recordType: RecordType) {
+			recordType.valueTypes.forEach { valueTypeId ->
+				val valueType = config.valueTypes[valueTypeId]
+				if (valueType?.include != false) {
+					val label = valueType?.label ?: valueTypeId
+					header.add(label)
 				}
+			}
+			recordType.children
+					.map { config.recordTypes[it] ?: throw Exception("missing type $it") }
+					.forEach {
+						proc(it)
+					}
+		}
+
+		val rootRecordType = config.recordTypes[config.rootRecordType] ?: throw Exception("missing type ${config.rootRecordType}")
+		proc(rootRecordType)
+
+		return header
 	}
 
 	private fun recordToArray(config: RecordModel, record: Record): List<Array<String>> {
-
 		val rows: MutableList<Array<String>> = mutableListOf()
 		val map: MutableMap<RecordType, Record> = mutableMapOf()
 
@@ -122,7 +112,7 @@ class ParseFormController: Controller() {
 			if (rec.isLeaf) {
 				rows.add( createRow(config, map) )
 			} else {
-				rec.children.values.forEach { it.forEach { pr(it) } }
+				rec.children.values.forEach { value -> value.forEach { pr(it) } }
 			}
 
 			map.remove(type)
@@ -146,26 +136,35 @@ class ParseFormController: Controller() {
 			if ((rec != null) && (pageNumber == null || recordType.pagePriority > pageNumberPriority)) {
 				pageNumber = rec.pageNumber
 				pageNumberPriority = recordType.pagePriority
-			}
 
-			recordType.valueTypes.forEach { valueTypeId ->
-				val valueType = config.valueTypes[valueTypeId]
 
-				if (valueType.include ?: true) {
-					row.add(rec.values.get(valueTypeId) ?: "")
+				recordType.valueTypes.forEach { valueTypeId ->
+
+					val valueType = config.valueTypes[valueTypeId]
+
+					if (valueType != null && valueType.include) {
+						row.add(rec.values[valueTypeId] ?: "")
+					}
+
 				}
 			}
+
 			recordType.children
-					.map { config.recordTypes[it] ?: throw Exception("missing type ${it}") }
+					.map { config.recordTypes[it] ?: throw Exception("missing type $it") }
 					.forEach { childRecordType ->
 						printType( childRecordType )
 					}
 		}
+
 		val rootRecordType = config.recordTypes[config.rootRecordType] ?: throw Exception("missing type ${config.rootRecordType}")
 
 		printType(rootRecordType)
 
 		return row.toTypedArray()
+	}
+
+	companion object {
+		const val MAX_ROWS = 1000
 	}
 
 }
